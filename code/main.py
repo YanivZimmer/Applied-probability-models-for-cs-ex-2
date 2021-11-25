@@ -39,5 +39,53 @@ def lind_mle(lamda, w_in_events,num_of_events,vocab_size):
     return Numerator/Denominator
 Output14=lind_mle(lamda=0.1,w_in_events=Output11,num_of_events=Output9,vocab_size=Output10)
 Output15=lind_mle(lamda=0.1,w_in_events=0,num_of_events=Output9,vocab_size=Output10)
-print(Output14)
-print(Output15)    
+#calc prod and lind for dataset
+from collections import Counter
+def calc_prob_unigram(data):
+    prob={}
+    data_len=len(data)
+    counter=Counter(data)
+    for item in counter.items:
+        prob[item[0]]=item[1]/data_len
+    return prob
+def calc_prob_lind(data,lamda):
+    prob={}
+    data_len=len(data)
+    counter=Counter(data)
+    vocab_size=count_unique_events(data)
+    for item in counter.items():
+        lind=lind_mle(lamda=lamda,w_in_events=item[1],num_of_events=data_len,vocab_size=vocab_size)
+        prob[item[0]]=lind
+    return prob
+#calc preplexity and helper methods
+import math
+#TODO- ask what log base should be used?
+def calc_log_event(event,prob_dict,prob_unseen):
+    if event not in prob_dict.keys():
+        return prob_unseen
+    return math.log2(prob_dict[event])
+
+def calc_log_sum(data,prob_dict,prob_unseen):
+    sum=0
+    for event in data:
+        sum=sum+calc_log_event(event=event,prob_dict=prob_dict,prob_unseen=prob_unseen)     
+    return sum
+
+def calc_preplexity(data,prob_dict,prob_unseen):
+    power=-1*calc_log_sum(data=data,prob_dict=prob_dict,prob_unseen=prob_unseen)/(len(data))
+    base=2
+    result=math.pow(base,power)
+    return result
+
+#calc preplexity for validation set
+def preplexity(valid_data,train_data,lamda):
+    prob_dict=calc_prob_lind(data=train_data,lamda=lamda)
+    prob_unseen=lind_mle(lamda=lamda,w_in_events=0,num_of_events=len(train_data)
+    ,vocab_size=count_unique_events(train_data))
+    prepl=calc_preplexity(data=valid_data,prob_dict=prob_dict,prob_unseen=prob_unseen)
+    return prepl
+#NOT TESTED YET!
+Output16=preplexity(valid_data=val_dev,train_data=train_dev,lamda=0.01)
+Output17=preplexity(valid_data=val_dev,train_data=train_dev,lamda=0.1)
+Output18=preplexity(valid_data=val_dev,train_data=train_dev,lamda=1.0)
+print(Output16,Output17,Output18)
