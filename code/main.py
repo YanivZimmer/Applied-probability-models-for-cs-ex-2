@@ -29,3 +29,15 @@ Output10=count_unique_events(train_dev)
 def count_event_in_events(event,events):
     return events.count(event)
 Output11=count_event_in_events(Output3,train_dev)
+#MLE=occurrences of w in events/number of events
+Output12=Output11/Output9
+Output13=0
+#lindMLE=(occurrences of w in events+lamda)/(number of event+lamda*|vocab|)
+def lind_mle(lamda, w_in_events,num_of_events,vocab_size):
+    Numerator=w_in_events+lamda
+    Denominator=num_of_events+lamda*vocab_size
+    return Numerator/Denominator
+Output14=lind_mle(lamda=0.1,w_in_events=Output11,num_of_events=Output9,vocab_size=Output10)
+Output15=lind_mle(lamda=0.1,w_in_events=0,num_of_events=Output9,vocab_size=Output10)
+print(Output14)
+print(Output15)    
