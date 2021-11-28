@@ -114,7 +114,12 @@ def lidetone(unigram_model, events, output_list):
     output_list.append(
         lidetone_model_training.lind_mle(0.1, number_of_occurences_for_unseen_input, train_dev_len, VOCABULARY_SIZE))
 
-    return validation_dev, train_dev
+    output_list.append(lidetone_model_training.preplexity(valid_data=validation_dev, train_data=train_dev, lamda=0.01))
+
+    output_list.append(lidetone_model_training.preplexity(valid_data=validation_dev, train_data=train_dev, lamda=0.1))
+
+    output_list.append(lidetone_model_training.preplexity(valid_data=validation_dev, train_data=train_dev, lamda=1))
+
 
 
 def run(arguments):
@@ -124,7 +129,7 @@ def run(arguments):
         print("Input us incorrect!")
         return None
     events = preprocessing(unigram_model, output_list)
-    val_dev, train_dev = lidetone(unigram_model, events, output_list)
+    lidetone(unigram_model, events, output_list)
     print(output_list)
     # TODO imeplemnt function that iterates output and writes to file in requested format OutputX: Y
 
