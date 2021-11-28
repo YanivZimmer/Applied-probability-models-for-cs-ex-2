@@ -26,19 +26,16 @@ def lind_mle(lamda, w_in_events, num_of_events, vocab_size):
     return numerator / denominator
 
 
-#
-def calc_prob_lind(data, lamda):
+def calc_prob_lind(data, lamda, vocab_size):
     prob = {}
     data_len = len(data)
     counter = Counter(data)
-    vocab_size = count_unique_events(data)
     for item in counter.items():
-        lind = lind_mle(lamda=lamda, w_in_events=item[1], num_of_events=data_len, vocab_size=VOCABULARY_SIZE)
+        lind = lind_mle(lamda=lamda, w_in_events=item[1], num_of_events=data_len, vocab_size=vocab_size)
         prob[item[0]] = lind
     return prob
 
 
-# # TODO- ask what log base should be used?
 def calc_log_event(event, prob_dict, prob_unseen):
     if event not in prob_dict.keys():
         return log2(prob_unseen)
@@ -46,10 +43,10 @@ def calc_log_event(event, prob_dict, prob_unseen):
 
 
 def calc_log_sum(data, prob_dict, prob_unseen):
-    sum = 0
+    sum_ = 0
     for event in data:
-        sum = sum + calc_log_event(event=event, prob_dict=prob_dict, prob_unseen=prob_unseen)
-    return sum
+        sum_ = sum_ + calc_log_event(event=event, prob_dict=prob_dict, prob_unseen=prob_unseen)
+    return sum_
 
 
 def calc_preplexity(data, prob_dict, prob_unseen):
@@ -61,7 +58,7 @@ def calc_preplexity(data, prob_dict, prob_unseen):
 
 # calc preplexity for validation set
 def preplexity(valid_data, train_data, lamda):
-    prob_dict = calc_prob_lind(data=train_data, lamda=lamda)
+    prob_dict = calc_prob_lind(data=train_data, lamda=lamda, vocab_size=VOCABULARY_SIZE)
     prob_unseen = lind_mle(lamda=lamda, w_in_events=0, num_of_events=len(train_data)
                            , vocab_size=VOCABULARY_SIZE)
     prepl = calc_preplexity(data=valid_data, prob_dict=prob_dict, prob_unseen=prob_unseen)
