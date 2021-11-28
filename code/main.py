@@ -3,71 +3,10 @@ from code.unigram import Unigram
 from code.consts import *
 import code.preprocessing as preprocessing_utils
 import code.lidetone_model_training as lidetone_model_training
+import code.held_out_training as held_out_training
+
 
 ### TODO change main.py file name to ex2.py
-# # calc prod and lind for dataset
-# from collections import Counter
-# #
-# #
-# def calc_prob_unigram(data):
-#     prob = {}
-#     data_len = len(data)
-#     counter = Counter(data)
-#     for item in counter.items:
-#         prob[item[0]] = item[1] / data_len
-#     return prob
-#
-# #
-# def calc_prob_lind(data, lamda):
-#     prob = {}
-#     data_len = len(data)
-#     counter = Counter(data)
-#     vocab_size = count_unique_events(data)
-#     for item in counter.items():
-#         lind = lind_mle(lamda=lamda, w_in_events=item[1], num_of_events=data_len, vocab_size=vocab_size)
-#         prob[item[0]] = lind
-#     return prob
-#
-#
-# # calc preplexity and helper methods
-# import math
-#
-#
-# # TODO- ask what log base should be used?
-# def calc_log_event(event, prob_dict, prob_unseen):
-#     if event not in prob_dict.keys():
-#         return prob_unseen
-#     return math.log2(prob_dict[event])
-#
-#
-# def calc_log_sum(data, prob_dict, prob_unseen):
-#     sum = 0
-#     for event in data:
-#         sum = sum + calc_log_event(event=event, prob_dict=prob_dict, prob_unseen=prob_unseen)
-#     return sum
-#
-#
-# def calc_preplexity(data, prob_dict, prob_unseen):
-#     power = -1 * calc_log_sum(data=data, prob_dict=prob_dict, prob_unseen=prob_unseen) / (len(data))
-#     base = 2
-#     result = math.pow(base, power)
-#     return result
-#
-#
-# # calc preplexity for validation set
-# def preplexity(valid_data, train_data, lamda):
-#     prob_dict = calc_prob_lind(data=train_data, lamda=lamda)
-#     prob_unseen = lind_mle(lamda=lamda, w_in_events=0, num_of_events=len(train_data)
-#                            , vocab_size=count_unique_events(train_data))
-#     prepl = calc_preplexity(data=valid_data, prob_dict=prob_dict, prob_unseen=prob_unseen)
-#     return prepl
-#
-#
-# # NOT TESTED YET!
-# Output16 = preplexity(valid_data=val_dev, train_data=train_dev, lamda=0.01)
-# Output17 = preplexity(valid_data=val_dev, train_data=train_dev, lamda=0.1)
-# Output18 = preplexity(valid_data=val_dev, train_data=train_dev, lamda=1.0)
-# # print(Output16, Output17, Output18)
 
 def initator(arguments, output_list):
     unigram_model = Unigram(arguments[0], arguments[1], arguments[2], arguments[3], VOCABULARY_SIZE, DIRECTORY_PATH)
@@ -104,10 +43,9 @@ def lidetone(unigram_model, events, output_list):
     output_list.append(number_of_occurences_for_input)
     output_list.append(number_of_occurences_for_input / train_dev_len)
 
-    number_of_occurences_for_unseen_input = 0
+    number_of_occurences_for_unseen_input = lidetone_model_training.count_event_in_events(UNSEEN_WORD, train_dev)
     output_list.append(number_of_occurences_for_unseen_input / train_dev_len)
 
-    # TODO: check if vocabulary size is needed to be the obsereved or the global
     output_list.append(
         lidetone_model_training.lind_mle(0.1, number_of_occurences_for_input, train_dev_len, VOCABULARY_SIZE))
 
@@ -120,6 +58,19 @@ def lidetone(unigram_model, events, output_list):
 
     output_list.append(lidetone_model_training.preplexity(valid_data=validation_dev, train_data=train_dev, lamda=1))
 
+    optimal_lamda, min_prep = lidetone_model_training.find_optimal_lamda(valid_data=validation_dev,
+                                                                         train_data=train_dev)
+    output_list.append(optimal_lamda)
+    output_list.append(min_prep)
+
+
+def held_out(unigram_model, events, output_list):
+    train_data, test_data = held_out_training.split_held_outtrain_validation(events=events)
+
+    train_data_len = len(train_data)
+    test_data_len = len(test_data)
+    output_list.append(train_data_len)
+    output_list.append(test_data_len)
 
 
 def run(arguments):
@@ -130,6 +81,8 @@ def run(arguments):
         return None
     events = preprocessing(unigram_model, output_list)
     lidetone(unigram_model, events, output_list)
+    held_out(unigram_model, events, output_list)
+
     print(output_list)
     # TODO imeplemnt function that iterates output and writes to file in requested format OutputX: Y
 

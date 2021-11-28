@@ -66,3 +66,15 @@ def preplexity(valid_data, train_data, lamda):
                            , vocab_size=VOCABULARY_SIZE)
     prepl = calc_preplexity(data=valid_data, prob_dict=prob_dict, prob_unseen=prob_unseen)
     return prepl
+
+
+def find_optimal_lamda(valid_data, train_data):
+    min_prep = preplexity(valid_data=valid_data, train_data=train_data, lamda=0.01)
+    min_lamda = 0.01
+    for lamda in range(2, 101):
+        noramlized_lamda = lamda / 100
+        prep_ = preplexity(valid_data=valid_data, train_data=train_data, lamda=noramlized_lamda)
+        if prep_ < min_prep:
+            min_prep = prep_
+            min_lamda = noramlized_lamda
+    return min_lamda, min_prep
