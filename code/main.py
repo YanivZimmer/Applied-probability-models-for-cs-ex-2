@@ -71,6 +71,8 @@ def held_out(unigram_model, events, output_list):
     test_data_len = len(test_data)
     output_list.append(train_data_len)
     output_list.append(test_data_len)
+    output_list.append(held_out_training.calc_held_out(train_data, test_data, unigram_model.input_word))
+    output_list.append(held_out_training.calc_held_out(train_data,test_data,UNSEEN_WORD))
 
 
 def run(arguments):
