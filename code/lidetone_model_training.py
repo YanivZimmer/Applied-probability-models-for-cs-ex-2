@@ -75,3 +75,17 @@ def find_optimal_lamda(valid_data, train_data):
             min_prep = prep_
             min_lamda = noramlized_lamda
     return min_lamda, min_prep
+
+
+def validate_lidestone_model_training(test_data):
+    len_test_data = len(test_data)
+    set_test_data = set(test_data)
+    total = 0
+    for word in set_test_data:
+        number_of_occurences_for_input = count_event_in_events(word, test_data)
+        total = total + lind_mle(0.06, w_in_events=number_of_occurences_for_input, num_of_events=len_test_data,
+                                 vocab_size=VOCABULARY_SIZE)
+    total = total + (VOCABULARY_SIZE - len(set_test_data)) * lind_mle(0.06, w_in_events=0, num_of_events=len_test_data,
+                                                                      vocab_size=VOCABULARY_SIZE)
+
+    return total

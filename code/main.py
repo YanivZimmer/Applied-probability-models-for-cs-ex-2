@@ -21,8 +21,8 @@ def initator(arguments, output_list):
     return unigram_model
 
 
-def preprocessing(unigram_model, output_list):
-    events = preprocessing_utils.events_in_file(unigram_model.develop_path())
+def preprocessing(path, output_list):
+    events = preprocessing_utils.events_in_file(path)
     output_list.append(len(events))
     return events
 
@@ -63,6 +63,9 @@ def lidetone(unigram_model, events, output_list):
     output_list.append(optimal_lamda)
     output_list.append(min_prep)
 
+    # validation
+    print(lidetone_model_training.validate_lidestone_model_training(test_data=validation_dev))
+
 
 def held_out(unigram_model, events, output_list):
     train_data, test_data = held_out_training.split_held_outtrain_validation(events=events)
@@ -72,7 +75,18 @@ def held_out(unigram_model, events, output_list):
     output_list.append(train_data_len)
     output_list.append(test_data_len)
     output_list.append(held_out_training.calc_held_out(train_data, test_data, unigram_model.input_word))
-    output_list.append(held_out_training.calc_held_out(train_data,test_data,UNSEEN_WORD))
+    output_list.append(held_out_training.calc_held_out(train_data, test_data, UNSEEN_WORD))
+
+    # validation
+    print(held_out_training.validation_held_out(test_data=test_data, train_data=train_data))
+
+
+def total_event_test_set(unigram_model, output_list):
+    return preprocessing(unigram_model.test_path(), output_list)
+
+
+def model_evaluation_test(unigram_model, output_list):
+    total_event_test_set(unigram_model, output_list)
 
 
 def run(arguments):
@@ -81,9 +95,10 @@ def run(arguments):
     if unigram_model is None:
         print("Input us incorrect!")
         return None
-    events = preprocessing(unigram_model, output_list)
+    events = preprocessing(unigram_model.develop_path(), output_list)
     lidetone(unigram_model, events, output_list)
     held_out(unigram_model, events, output_list)
+    model_evaluation_test(unigram_model=unigram_model, output_list=output_list)
 
     print(output_list)
     # TODO imeplemnt function that iterates output and writes to file in requested format OutputX: Y

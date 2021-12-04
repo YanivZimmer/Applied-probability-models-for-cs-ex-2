@@ -22,7 +22,7 @@ def counter_to_dictionary(counter_data):
     return occurrences_word_dict, max_occourence
 
 
-def calculate_t_r(occurrences_word_dict_train, counter_train, test_data, r):
+def calculate_t_r(occurrences_word_dict_train, counter_train, counter_test, test_data, r):
     cnt = 0
     if r not in occurrences_word_dict_train:
         if r == 0:
@@ -32,9 +32,9 @@ def calculate_t_r(occurrences_word_dict_train, counter_train, test_data, r):
             return cnt
         return 0
     words_appeared_r_times_in_train = occurrences_word_dict_train[r]
-    for word in test_data:
-        if word in words_appeared_r_times_in_train:
-            cnt = cnt + 1
+    for word in words_appeared_r_times_in_train:
+        if word in counter_test:
+            cnt = cnt + counter_test[word]
     return cnt
 
 
@@ -44,15 +44,39 @@ def calc_n_r(occurrences_word_dict_train, train_data, r):
     return VOCABULARY_SIZE - len(set(train_data))
 
 
-def calc_held_out(train_data, test_data, word):
-    counter_train = Counter(train_data)
+def calculation_held_out(occurrences_word_dict_train, counter_train, counter_test, test_data, train_data, word):
     if word in counter_train.keys():
         r = counter_train[word]
     else:
         r = 0
-    occurrences_word_dict_train, max_occourence_train = counter_to_dictionary(counter_train)
+    # occurrences_word_dict_train, max_occourence_train = counter_to_dictionary(counter_train)
 
     numenator = calculate_t_r(occurrences_word_dict_train=occurrences_word_dict_train, counter_train=counter_train,
-                              test_data=test_data, r=r)
+                              counter_test=counter_test, test_data=test_data, r=r)
     dec = calc_n_r(occurrences_word_dict_train=occurrences_word_dict_train, train_data=train_data, r=r) * len(test_data)
     return numenator / dec
+
+
+def calc_held_out(train_data, test_data, word):
+    counter_train = Counter(train_data)
+    counter_test = Counter(test_data)
+    occurrences_word_dict_train, max_occourence_train = counter_to_dictionary(counter_train)
+    return calculation_held_out(occurrences_word_dict_train, counter_train, counter_test, test_data, train_data, word)
+
+
+def validation_held_out(test_data, train_data):
+    counter_train = Counter(test_data)
+    counter_test = Counter(test_data)
+    occurrences_word_dict_train, max_occourence_train = counter_to_dictionary(counter_train)
+    set_test_data = set(test_data)
+    total = 0
+    for word in set_test_data:
+        total = total + calculation_held_out(occurrences_word_dict_train=occurrences_word_dict_train,
+                                             counter_train=counter_train, counter_test=counter_test,
+                                             test_data=test_data, train_data=train_data, word=word)
+    total = total + (calculation_held_out(occurrences_word_dict_train=occurrences_word_dict_train,
+                                          counter_train=counter_train, counter_test=counter_test,
+                                          test_data=test_data, train_data=train_data, word=UNSEEN_WORD)) * calc_n_r(
+        occurrences_word_dict_train=counter_train,
+        train_data=train_data, r=0)
+    return total
