@@ -1,7 +1,7 @@
-import code.consts
-import code.unigram
-import code.preprocessing
-import code.file_utils
-import code.lidetone_model_training
-import code.held_out_training
-import code.main
+import consts
+import unigram
+import preprocessing
+import file_utils
+import lidetone_model_training
+import held_out_training
+import main

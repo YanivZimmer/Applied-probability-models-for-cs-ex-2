@@ -1,6 +1,6 @@
 from math import floor, log2, pow
 from collections import Counter
-from code.consts import *
+from consts import *
 
 
 def split_train_validation(events, split_rate):

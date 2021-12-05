@@ -1,6 +1,6 @@
 from math import floor
 from collections import Counter
-from .consts import *
+from consts import *
 
 
 def split_held_outtrain_validation(events):
