@@ -1,9 +1,9 @@
-import sys
-from code.unigram import Unigram
-from code.consts import *
-import code.preprocessing as preprocessing_utils
-import code.lidetone_model_training as lidetone_model_training
-import code.held_out_training as held_out_training
+import sys,os
+from unigram import Unigram
+from consts import *
+import preprocessing as preprocessing_utils
+import lidetone_model_training as lidetone_model_training
+import held_out_training as held_out_training
 
 
 ### TODO change main.py file name to ex2.py
@@ -86,8 +86,10 @@ def total_event_test_set(unigram_model, output_list):
 
 
 def model_evaluation_test(unigram_model, output_list):
-    total_event_test_set(unigram_model, output_list)
-
+    events,_=total_event_test_set(unigram_model, output_list)
+    #train_test, validation_test=split_train_validation(events, LIDESTONE_SPLIT_RATE)
+    #prep= lidetone_model_training.preplexity(valid_data=validation_test,train_data=train_test,lamda=output_list[19])
+    #print("events={0}train-len={1},valid-len={2},prep={3}".format(len(events),len(train_test),len(validation_test),prep))
 
 def run(arguments):
     output_list = []
