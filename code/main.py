@@ -87,7 +87,7 @@ def preprocessing(path):
 ### lidestone
 
 
-def split_train_validation(events, split_rate):
+def split_lidetone_train_validation(events, split_rate):
     index = round(split_rate * len(events))
     train = events[:index]
     validation = events[index:]
@@ -176,7 +176,7 @@ def validate_lidestone_model_training(test_data):
 
 
 def lidetone(unigram_model, events, output_list):
-    train_dev, validation_dev = split_train_validation(events, LIDESTONE_SPLIT_RATE)
+    train_dev, validation_dev = split_lidetone_train_validation(events, LIDESTONE_SPLIT_RATE)
     validation_dev_len = len(validation_dev)
     train_dev_len = len(train_dev)
 
@@ -320,11 +320,20 @@ def model_evaluation_test(unigram_model, output_list):
     output_list.append(len(events))
     best_lamda = 0.06  # output_list[18]
 
-    train_test, validation_test = split_train_validation(events, LIDESTONE_SPLIT_RATE)
+    train_test, validation_test = split_lidetone_train_validation(events, LIDESTONE_SPLIT_RATE)
     prep = preplexity(valid_data=validation_test, train_data=train_test, lamda=best_lamda)
     print(prep)
+
     # print("events={0},train-len={1},valid-len={2},prep={3}".format(len(events), len(train_test), len(validation_test),
     #                                                                prep))
+
+
+def output_list_to_string(output_list):
+    # TODO: insert ID
+    str = "#Students	Ben Nageris	Yaniv Zimmer <ID1> <ID2>\n"
+    for idx, item in enumerate(output_list):
+        str = str + "#Output{idx}     {item}\n".format(idx=idx + 1, item=item)
+    return str
 
 
 def run(arguments):
@@ -336,11 +345,11 @@ def run(arguments):
     events = preprocessing(unigram_model.develop_path())
     output_list.append(len(events))
     lidetone(unigram_model, events, output_list)
-    # held_out(unigram_model, events, output_list)
+    held_out(unigram_model, events, output_list)
     model_evaluation_test(unigram_model=unigram_model, output_list=output_list)
 
-    print(output_list)
-    # TODO imeplemnt function that iterates output and writes to file in requested format OutputX: Y
+    print(output_list_to_string(output_list))
+    # TODO implement function that iterates output and writes to file in requested format OutputX: Y
 
 
 if __name__ == "__main__":
