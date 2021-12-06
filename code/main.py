@@ -351,6 +351,20 @@ def run(arguments):
     print(output_list_to_string(output_list))
     # TODO implement function that iterates output and writes to file in requested format OutputX: Y
 
+import cProfile
+from pstats import Stats, SortKey
 
 if __name__ == "__main__":
-    run(sys.argv[1:])
+    do_profiling = True
+    if do_profiling:
+        with cProfile.Profile() as pr:
+            run(sys.argv[1:])
+
+        with open('profiling_stats.txt', 'w') as stream:
+            stats = Stats(pr, stream=stream)
+            stats.strip_dirs()
+            stats.sort_stats('time')
+            stats.dump_stats('.prof_stats')
+            stats.print_stats()
+
+    #run(sys.argv[1:])
