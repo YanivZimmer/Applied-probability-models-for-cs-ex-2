@@ -2,11 +2,12 @@ import sys, os
 from math import floor
 from collections import Counter
 import os.path
-import os.path
 from pathlib import Path
 from math import floor, log2, pow
 from collections import Counter
+import math
 
+LAMBDA_DEFUALT_VALUE = -1
 DIRECTORY_PATH = "../dataset"
 VOCABULARY_SIZE = 300000
 LIDESTONE_SPLIT_RATE = 0.9
@@ -141,7 +142,7 @@ def calc_preplexity(data, prob_dict, prob_unseen):
 
 
 # calc preplexity for validation set
-def preplexity(valid_data, train_data, lamda):
+def lidetone_preplexity(valid_data, train_data, lamda):
     prob_dict = calc_prob_lind(data=train_data, lamda=lamda, vocab_size=VOCABULARY_SIZE)
     prob_unseen = lind_mle(lamda=lamda, w_in_events=0, num_of_events=len(train_data)
                            , vocab_size=VOCABULARY_SIZE)
@@ -149,12 +150,33 @@ def preplexity(valid_data, train_data, lamda):
     return prepl
 
 
+def heldout_preplexity(test_data, train_data):
+    counter_train = Counter(train_data)
+    counter_test = Counter(test_data)
+    occurrences_word_dict_train, max_occourence_train = counter_to_dictionary(counter_train)
+    len_dictionary = dictionary_to_len_dictionary(occurrences_word_dict_train)
+    set_test_data = set(test_data)
+    prob_dict = {}
+    for word in set_test_data:
+        # print(word)
+        prob_dict[word] = calculation_held_out(occurrences_word_dict_train=occurrences_word_dict_train,
+                                               counter_train=counter_train, counter_test=counter_test,
+                                               test_data=train_data, train_data=train_data, word=word,
+                                               len_dictionary=len_dictionary)
+    prob_unseen = calculation_held_out(occurrences_word_dict_train=occurrences_word_dict_train,
+                                       counter_train=counter_train, counter_test=counter_test,
+                                       test_data=test_data, train_data=train_data, word=UNSEEN_WORD)
+
+    print(calc_preplexity(test_data, prob_dict, prob_unseen))
+    # return 0
+
+
 def find_optimal_lamda(valid_data, train_data):
-    min_prep = preplexity(valid_data=valid_data, train_data=train_data, lamda=0.01)
+    min_prep = lidetone_preplexity(valid_data=valid_data, train_data=train_data, lamda=0.01)
     min_lamda = 0.01
     for lamda in range(2, 201):
         noramlized_lamda = lamda / 100
-        prep_ = preplexity(valid_data=valid_data, train_data=train_data, lamda=noramlized_lamda)
+        prep_ = lidetone_preplexity(valid_data=valid_data, train_data=train_data, lamda=noramlized_lamda)
         if prep_ < min_prep:
             min_prep = prep_
             min_lamda = noramlized_lamda
@@ -198,11 +220,11 @@ def lidetone(unigram_model, events, output_list):
 
     output_list.append(lind_mle(0.1, number_of_occurences_for_unseen_input, train_dev_len, VOCABULARY_SIZE))
 
-    output_list.append(preplexity(valid_data=validation_dev, train_data=train_dev, lamda=0.01))
+    output_list.append(lidetone_preplexity(valid_data=validation_dev, train_data=train_dev, lamda=0.01))
 
-    output_list.append(preplexity(valid_data=validation_dev, train_data=train_dev, lamda=0.1))
+    output_list.append(lidetone_preplexity(valid_data=validation_dev, train_data=train_dev, lamda=0.1))
 
-    output_list.append(preplexity(valid_data=validation_dev, train_data=train_dev, lamda=1))
+    output_list.append(lidetone_preplexity(valid_data=validation_dev, train_data=train_dev, lamda=1))
 
     optimal_lamda, min_prep = find_optimal_lamda(valid_data=validation_dev, train_data=train_dev)
     output_list.append(optimal_lamda)
@@ -210,6 +232,7 @@ def lidetone(unigram_model, events, output_list):
 
     # validation
     print(validate_lidestone_model_training(test_data=validation_dev))
+    return train_dev
 
 
 #### end lidestone
@@ -236,6 +259,13 @@ def counter_to_dictionary(counter_data):
     return occurrences_word_dict, max_occourence
 
 
+def dictionary_to_len_dictionary(occurrences_word_dict):
+    len_dictionary = {}
+    for item in occurrences_word_dict:
+        len_dictionary[item] = len(occurrences_word_dict[item])
+    return len_dictionary
+
+
 def calculate_t_r(occurrences_word_dict_train, counter_train, counter_test, test_data, r):
     cnt = 0
     if r not in occurrences_word_dict_train:
@@ -252,20 +282,25 @@ def calculate_t_r(occurrences_word_dict_train, counter_train, counter_test, test
     return cnt
 
 
-def calc_n_r(occurrences_word_dict_train, train_data, r):
+def calc_n_r(occurrences_word_dict_train, train_data, r, len_dictionary=None):
     if r in occurrences_word_dict_train:
-        return len(occurrences_word_dict_train[r])
+        if len_dictionary is None:
+            return len(occurrences_word_dict_train[r])
+        else:
+            return len_dictionary[r]
     return VOCABULARY_SIZE - len(set(train_data))
 
 
-def calculation_held_out(occurrences_word_dict_train, counter_train, counter_test, test_data, train_data, word):
+def calculation_held_out(occurrences_word_dict_train, counter_train, counter_test, test_data, train_data, word,
+                         len_dictionary=None):
     if word in counter_train.keys():
         r = counter_train[word]
     else:
         r = 0
     numenator = calculate_t_r(occurrences_word_dict_train=occurrences_word_dict_train, counter_train=counter_train,
                               counter_test=counter_test, test_data=test_data, r=r)
-    dec = calc_n_r(occurrences_word_dict_train=occurrences_word_dict_train, train_data=train_data, r=r) * len(test_data)
+    dec = calc_n_r(occurrences_word_dict_train=occurrences_word_dict_train, train_data=train_data, r=r,
+                   len_dictionary=len_dictionary) * len(test_data)
     return numenator / dec
 
 
@@ -314,18 +349,17 @@ def total_event_test_set(unigram_model):
     return preprocessing(unigram_model.test_path())
 
 
-def model_evaluation_test(unigram_model, output_list):
-    print(unigram_model.test_path())
-    events = total_event_test_set(unigram_model)
-    output_list.append(len(events))
+def model_evaluation_test(train_dev, unigram_model, output_list):
+    validation_events = total_event_test_set(unigram_model)
+    output_list.append(len(validation_events))
     best_lamda = 0.06  # output_list[18]
+    prep = lidetone_preplexity(valid_data=validation_events, train_data=train_dev, lamda=best_lamda)
+    output_list.append(prep)
 
-    train_test, validation_test = split_lidetone_train_validation(events, LIDESTONE_SPLIT_RATE)
-    prep = preplexity(valid_data=validation_test, train_data=train_test, lamda=best_lamda)
-    print(prep)
+    print(heldout_preplexity(validation_events, train_dev))
 
-    # print("events={0},train-len={1},valid-len={2},prep={3}".format(len(events), len(train_test), len(validation_test),
-    #                                                                prep))
+    # print(validation_held_out(test_data=validation_events, train_data=train_dev))
+    # held_out(unigram_model)
 
 
 def output_list_to_string(output_list):
@@ -344,9 +378,9 @@ def run(arguments):
         return None
     events = preprocessing(unigram_model.develop_path())
     output_list.append(len(events))
-    lidetone(unigram_model, events, output_list)
+    train_dev = lidetone(unigram_model, events, output_list)
     held_out(unigram_model, events, output_list)
-    model_evaluation_test(unigram_model=unigram_model, output_list=output_list)
+    model_evaluation_test(train_dev=train_dev, unigram_model=unigram_model, output_list=output_list)
 
     print(output_list_to_string(output_list))
     # TODO implement function that iterates output and writes to file in requested format OutputX: Y
