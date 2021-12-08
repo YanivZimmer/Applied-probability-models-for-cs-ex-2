@@ -1,11 +1,9 @@
+# Ben Nageris And Yaniv Zimmer <ID1> <ID2>
 import sys, os
-from math import floor
-from collections import Counter
 import os.path
 from pathlib import Path
 from math import floor, log2, pow
 from collections import Counter
-import math
 
 EPSILON = 0.00000001
 LAMBDA_DEFUALT_VALUE = -1
@@ -14,8 +12,6 @@ VOCABULARY_SIZE = 300000
 LIDESTONE_SPLIT_RATE = 0.9
 UNSEEN_WORD = "unseen-word"
 
-
-### TODO change main.py file name to ex2.py
 
 def is_file_exists(directory, file_name):
     file_location = os.path.join(directory, file_name)
@@ -42,8 +38,7 @@ class Unigram(object):
 
     def validate_files(self):
         if is_file_exists(self.directory_path, self.develop_file) and is_file_exists(
-                self.directory_path, self.test_file) and not is_file_exists(self.directory_path,
-                                                                            self.output_file):
+                self.directory_path, self.test_file):
             return True
         return False
 
@@ -114,8 +109,6 @@ def lind_mle(lamda, w_in_events, num_of_events, vocab_size):
 
 def calc_prob_lind(data_counter, data_len, lamda, vocab_size):
     prob = {}
-    # data_len = len(data)
-    # counter = Counter(data)
     for name, occourences in data_counter.items():
         lind = lind_mle(lamda=lamda, w_in_events=occourences, num_of_events=data_len, vocab_size=vocab_size)
         prob[name] = lind
@@ -170,23 +163,24 @@ def initiate_heldout_params(train_data, test_data):
     number_of_unique_word_in_test = len(set_test_data)
     frequency_prob_dict = {}
     unique_events_in_train_cnt = len(set(train_data))
+    t_r_cache = {}
     for word in set_test_data:
         if word in word_to_occurrence_dict:
             freq = word_to_occurrence_dict[word]
         else:
             freq = 0
         if freq not in frequency_prob_dict:
-            # todo: change word -> freq
             frequency_prob_dict[freq] = calculation_held_out(occurrences_word_dict_train=occurrences_word_dict_train,
                                                              counter_train=counter_train, counter_test=counter_test,
-                                                             test_data=test_data, train_data=train_data, word=word,
+                                                             test_data=test_data, word=word,
                                                              len_train_data=number_of_unique_word_in_train,
                                                              unique_events_in_train_cnt=unique_events_in_train_cnt,
-                                                             number_of_unique_word_in_test=number_of_unique_word_in_test,
+                                                             t_r_cache=t_r_cache,
                                                              len_dictionary=len_dictionary)
+    q = len(set(train_data)) + len(set(test_data))
     return counter_train, len(train_data), counter_test, len(
         test_data), occurrences_word_dict_train, len_dictionary, word_to_occurrence_dict, number_of_unique_word_in_train, \
-           number_of_unique_word_in_test, occurrences_word_dict_train, max_occourence_train, frequency_prob_dict
+           number_of_unique_word_in_test, occurrences_word_dict_train, max_occourence_train, frequency_prob_dict, t_r_cache, q
 
 
 def word_to_occourence_to_word_probability_dict(word_to_occurrence_dict, frequency_prob_dict):
@@ -273,7 +267,6 @@ def lidetone(unigram_model, events, output_list):
     output_list.append(min_prep)
 
     # validation
-    # print(validate_lidestone_model_training(test_data=validation_dev))
     return train_dev, train_dev_len, validation_dev, validation_dev_len, counter_train
 
 
@@ -331,28 +324,21 @@ def calc_n_r(occurrences_word_dict_train, number_of_unique_word_in_train, r, len
     return VOCABULARY_SIZE - number_of_unique_word_in_train
 
 
-def calculation_held_out(occurrences_word_dict_train, counter_train, counter_test, test_data, train_data, word,
-                         len_train_data, unique_events_in_train_cnt, number_of_unique_word_in_test, len_dictionary):
+def calculation_held_out(occurrences_word_dict_train, counter_train, counter_test, test_data, word,
+                         len_train_data, unique_events_in_train_cnt, t_r_cache, len_dictionary):
     if word in counter_train.keys():
         r = counter_train[word]
     else:
         r = 0
-    numenator = calculate_t_r(occurrences_word_dict_train=occurrences_word_dict_train, counter_train=counter_train,
-                              counter_test=counter_test, test_data=test_data, r=r)
-
+    if r not in t_r_cache:
+        t_r_cache[r] = calculate_t_r(occurrences_word_dict_train=occurrences_word_dict_train,
+                                     counter_train=counter_train,
+                                     counter_test=counter_test, test_data=test_data, r=r)
+    numenator = t_r_cache[r]
     dec = calc_n_r(occurrences_word_dict_train=occurrences_word_dict_train,
-                   number_of_unique_word_in_train=unique_events_in_train_cnt,
-                   r=r, len_dictionary=len_dictionary) * len_train_data
+                   number_of_unique_word_in_train=unique_events_in_train_cnt, r=r,
+                   len_dictionary=len_dictionary) * len_train_data
     return numenator / dec
-
-
-def calc_held_out(train_data, test_data, word):
-    counter_train = Counter(train_data)
-    counter_test = Counter(test_data)
-    occurrences_word_dict_train, max_occourence_train = counter_to_occourenct_dictionary(counter_train)
-    return calculation_held_out(occurrences_word_dict_train
-                                =occurrences_word_dict_train, counter_train=counter_train, counter_test=counter_test,
-                                test_data=test_data, len_train_data=len(train_data), train_data=train_data, word=word)
 
 
 def validation_heldout(word_to_occurrence_dict, frequency_prob_dict, train_data, len_dictionary,
@@ -382,7 +368,7 @@ def heldout_lookup_for_probability(word_to_occurrence_dict, frequency_prob_dict,
 def heldout(unigram_model, events, output_list):
     train_data, test_data = split_heldout_train_validation(events=events)
     counter_train, len_train_data, counter_test, len_test_data, occurrences_word_dict_train, len_dictionary, word_to_occurrence_dict, number_of_unique_word_in_train, \
-    number_of_unique_word_in_test, occurrences_word_dict_train, max_occourence_train, frequency_prob_dict = initiate_heldout_params(
+    number_of_unique_word_in_test, occurrences_word_dict_train, max_occourence_train, frequency_prob_dict, t_r_cache, unique_events_in_train_cnt = initiate_heldout_params(
         train_data=train_data, test_data=test_data)
     output_list.append(len_train_data)
     output_list.append(len_test_data)
@@ -392,12 +378,7 @@ def heldout(unigram_model, events, output_list):
     output_list.append(heldout_lookup_for_probability(word_to_occurrence_dict=word_to_occurrence_dict,
                                                       frequency_prob_dict=frequency_prob_dict,
                                                       word=UNSEEN_WORD))
-
-    # print(heldout_preplexity(test_data=test_data, word_to_occurrence_dict=word_to_occurrence_dict,
-    #                          frequency_prob_dict=frequency_prob_dict, output_list=output_list))
-    # print(heldout_preplexity(test_data, word_to_occurrence_dict, frequency_prob_dict))
-
-    return word_to_occurrence_dict, frequency_prob_dict, train_data, len_dictionary, occurrences_word_dict_train
+    return word_to_occurrence_dict, frequency_prob_dict, train_data, len_dictionary, occurrences_word_dict_train, t_r_cache, unique_events_in_train_cnt
 
 
 def validate_score(score, required_score=1, epsilon=EPSILON):
@@ -449,8 +430,14 @@ def output_list_to_string(output_list):
     # TODO: insert ID
     str = "#Students	Ben Nageris	Yaniv Zimmer <ID1> <ID2>\n"
     for idx, item in enumerate(output_list):
-        str = str + "#Output{idx}     {item}\n".format(idx=idx + 1, item=item)
+        str = str + "#Output{idx}\t{item}\n".format(idx=idx + 1, item=item)
     return str
+
+
+def get_t_r(t_r_cache, r):
+    if r in t_r_cache:
+        return t_r_cache[r]
+    return -1
 
 
 def run(arguments):
@@ -464,17 +451,34 @@ def run(arguments):
     train_dev, train_dev_len, validation_dev, validation_dev_len, counter_train = lidetone(unigram_model, events,
                                                                                            output_list)
 
-    word_to_occurrence_dict, frequency_prob_dict, train_data, len_dictionary, occurrences_word_dict_train = heldout(
+    word_to_occurrence_dict, frequency_prob_dict, train_data, len_dictionary, occurrences_word_dict_train, t_r_cache, unique_events_in_train_cnt = heldout(
         unigram_model, events, output_list)
 
-    # validation(word_to_occurrence_dict=word_to_occurrence_dict, frequency_prob_dict=frequency_prob_dict,
-    #            train_data=train_data, len_dictionary=len_dictionary,
-    #            occurrences_word_dict_train=occurrences_word_dict_train, test_data=train_dev, lamda=0.06)
+    validation(word_to_occurrence_dict=word_to_occurrence_dict, frequency_prob_dict=frequency_prob_dict,
+               train_data=train_data, len_dictionary=len_dictionary,
+               occurrences_word_dict_train=occurrences_word_dict_train, test_data=train_dev, lamda=0.06)
 
     model_evaluation_test(counter_train, train_dev_len, unigram_model, frequency_prob_dict, word_to_occurrence_dict,
                           output_list)
-    print(output_list_to_string(output_list))
-    # TODO implement function that iterates output and writes to file in requested format OutputX: Y
+    count_unique_train_data = len(set(train_data))
+    table_output = "\n"
+    for r in range(0, 10):
+        table_output = table_output + "{}\t\t".format(r)
+        t_r = get_t_r(t_r_cache, r)
+        n_r = calc_n_r(occurrences_word_dict_train, count_unique_train_data, r, len_dictionary)
+        table_output = table_output + "{}\t{}\t{}\t{}".format(
+            round(lind_mle(output_list[18], r, train_dev_len, VOCABULARY_SIZE) * train_dev_len, 5),
+            round(t_r / n_r, 5),
+            n_r,
+            t_r)
+        if r != 10:
+            table_output = table_output + "\n"
+    output_list.append(table_output)
+
+    output_string = output_list_to_string(output_list)
+    print(output_string)
+    with open(unigram_model.output_path(), "w+") as f:
+        f.write(output_string)
 
 
 if __name__ == "__main__":
