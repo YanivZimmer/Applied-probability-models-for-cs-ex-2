@@ -154,14 +154,14 @@ def counter_to_word_occurrence_dict(counter):
     return dict_
 
 
-def initiate_heldout_params(train_data, test_data):
+def initiate_heldout_params(train_data, validation_data):
     counter_train = Counter(train_data)
     word_to_occurrence_dict = counter_to_word_occurrence_dict(counter_train)
-    counter_test = Counter(test_data)
+    counter_valid = Counter(validation_data)
     occurrences_word_dict_train, max_occourence_train = counter_to_occourenct_dictionary(counter_train)
     len_dictionary = dictionary_to_len_dictionary(occurrences_word_dict_train)
-    set_test_data = set(test_data)
-    number_of_unique_word_in_train = len(train_data)
+    set_test_data = set(validation_data)
+    train_data_len = len(train_data)
     number_of_unique_word_in_test = len(set_test_data)
     frequency_prob_dict = {}
     unique_events_in_train_cnt = len(set(train_data))
@@ -173,16 +173,16 @@ def initiate_heldout_params(train_data, test_data):
             freq = 0
         if freq not in frequency_prob_dict:
             frequency_prob_dict[freq] = calculation_held_out(occurrences_word_dict_train=occurrences_word_dict_train,
-                                                             counter_train=counter_train, counter_test=counter_test,
-                                                             test_data=test_data, word=word,
-                                                             len_train_data=number_of_unique_word_in_train,
+                                                             counter_train=counter_train, counter_test=counter_valid,
+                                                             test_data=validation_data, word=word,
+                                                             len_train_data=train_data_len,
                                                              unique_events_in_train_cnt=unique_events_in_train_cnt,
                                                              t_r_cache=t_r_cache,
                                                              len_dictionary=len_dictionary)
-    q = len(set(train_data)) + len(set(test_data))
-    return counter_train, len(train_data), counter_test, len(
-        test_data), occurrences_word_dict_train, len_dictionary, word_to_occurrence_dict, number_of_unique_word_in_train, \
-           number_of_unique_word_in_test, occurrences_word_dict_train, max_occourence_train, frequency_prob_dict, t_r_cache, q
+    unique_events_in_train_cnt = len(set(train_data)) + len(set(validation_data))
+    return counter_train, len(train_data), counter_valid, len(
+        validation_data), occurrences_word_dict_train, len_dictionary, word_to_occurrence_dict, train_data_len, \
+           number_of_unique_word_in_test, occurrences_word_dict_train, max_occourence_train, frequency_prob_dict, t_r_cache, unique_events_in_train_cnt
 
 
 def word_to_occourence_to_word_probability_dict(word_to_occurrence_dict, frequency_prob_dict):
@@ -278,14 +278,6 @@ def lidetone(unigram_model, events, output_list):
 
 ### heldout
 
-
-# def split_heldout_train_validation(events):
-#     index = floor(len(events) / 2)
-#     train = events[:index]
-#     validation = events[index:]
-#     return train, validation
-
-
 def counter_to_occourenct_dictionary(counter_data):
     occurrences_word_dict = {}
     max_occourence = 0
@@ -370,10 +362,10 @@ def heldout_lookup_for_probability(word_to_occurrence_dict, frequency_prob_dict,
 
 
 def heldout(unigram_model, events, output_list):
-    train_data, test_data = split_data(events=events, split_rate=HEDLOUT_SPLIT_RATE)
+    T_heldout_data, H_heldout_data = split_data(events=events, split_rate=HEDLOUT_SPLIT_RATE)
     counter_train, len_train_data, counter_test, len_test_data, occurrences_word_dict_train, len_dictionary, word_to_occurrence_dict, number_of_unique_word_in_train, \
-    number_of_unique_word_in_test, occurrences_word_dict_train, max_occourence_train, frequency_prob_dict, t_r_cache, unique_events_in_train_cnt = initiate_heldout_params(
-        train_data=train_data, test_data=test_data)
+    number_of_unique_word_in_develop, occurrences_word_dict_train, max_occourence_train, frequency_prob_dict, t_r_cache, unique_events_in_train_cnt = initiate_heldout_params(
+        train_data=T_heldout_data, validation_data=H_heldout_data)
     output_list.append(len_train_data)
     output_list.append(len_test_data)
     output_list.append(heldout_lookup_for_probability(word_to_occurrence_dict=word_to_occurrence_dict,
@@ -382,7 +374,7 @@ def heldout(unigram_model, events, output_list):
     output_list.append(heldout_lookup_for_probability(word_to_occurrence_dict=word_to_occurrence_dict,
                                                       frequency_prob_dict=frequency_prob_dict,
                                                       word=UNSEEN_WORD))
-    return word_to_occurrence_dict, frequency_prob_dict, train_data, len_dictionary, occurrences_word_dict_train, t_r_cache, unique_events_in_train_cnt
+    return word_to_occurrence_dict, frequency_prob_dict, T_heldout_data, len_dictionary, occurrences_word_dict_train, t_r_cache, unique_events_in_train_cnt
 
 
 def validate_score(score, required_score=1, epsilon=EPSILON):
@@ -415,16 +407,16 @@ def total_event_test_set(unigram_model):
 
 def model_evaluation_test(counter_train, train_data_len, unigram_model, frequency_prob_dict, word_to_occurrence_dict,
                           output_list):
-    validation_events = total_event_test_set(unigram_model)
-    len_validation_events = len(validation_events)
-    output_list.append(len_validation_events)
+    test_events = total_event_test_set(unigram_model)
+    len_test_events = len(test_events)
+    output_list.append(len_test_events)
 
     best_lamda = output_list[18]
-    lidetone_prep = lidetone_preplexity(valid_data=validation_events, counter_train=counter_train,
+    lidetone_prep = lidetone_preplexity(valid_data=test_events, counter_train=counter_train,
                                         train_data_len=train_data_len,
                                         lamda=best_lamda)
 
-    heldout_prep = heldout_preplexity(test_data=validation_events, word_to_occurrence_dict=word_to_occurrence_dict,
+    heldout_prep = heldout_preplexity(test_data=test_events, word_to_occurrence_dict=word_to_occurrence_dict,
                                       frequency_prob_dict=frequency_prob_dict, output_list=output_list)
 
     output_list.append(lidetone_prep)
@@ -476,7 +468,8 @@ def run(arguments):
         t_r = get_t_r(t_r_cache, r)
         n_r = calc_n_r(occurrences_word_dict_train, count_unique_train_data, r, len_dictionary)
         table_output = table_output + "{}\t{}\t{}\t{}".format(
-            round(lind_mle(output_list[18], r, lidestone_train_data_len, VOCABULARY_SIZE) * lidestone_train_data_len, 5),
+            round(lind_mle(output_list[18], r, lidestone_train_data_len, VOCABULARY_SIZE) * lidestone_train_data_len,
+                  5),
             round(t_r / n_r, 5),
             n_r,
             t_r)
